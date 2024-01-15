@@ -22,12 +22,37 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Catalog {
 
+    public static class DbTable {
+        // private static final long serialVersionUID = 1L;
+        private DbFile file;
+        private String name;
+        private String pkeyField;
+ 
+        public DbTable (DbFile f, String n, String p) {
+            file = f;
+            name = n;
+            pkeyField = p;
+        }
+
+        public String toString() {
+            return ""; // TODO;
+        }
+    }
+
+    private ConcurrentHashMap<Integer, Integer> h;
+    private ConcurrentHashMap<String, Integer> name2id;
+    private ArrayList<DbTable> tables;
+    private ArrayList<Integer> table_ids;
     /**
      * Constructor.
      * Creates a new, empty catalog.
      */
     public Catalog() {
-        // TODO: some code goes here
+        // TODO: some code goes here; MAY DONE
+        h = new ConcurrentHashMap<Integer, Integer>();
+        name2id = new ConcurrentHashMap<String,Integer >();
+        tables = new ArrayList<DbTable>();
+        table_ids = new ArrayList<Integer>();
     }
 
     /**
@@ -41,7 +66,17 @@ public class Catalog {
      * @param pkeyField the name of the primary key field
      */
     public void addTable(DbFile file, String name, String pkeyField) {
-        // TODO: some code goes here
+        if (name2id.get(name) == null) {
+            tables.add(new DbTable(file, name, pkeyField));
+            h.put(file.getId(), tables.size()-1);
+            table_ids.add(file.getId());
+        } else {
+            tables.set(h.get(name2id.get(name)), new DbTable(file, name, pkeyField));
+            table_ids.set(h.get(name2id.get(name)), file.getId());
+            h.put(file.getId(), h.get(name2id.get(name)));
+        }
+
+        name2id.put(name, file.getId());
     }
 
     public void addTable(DbFile file, String name) {
@@ -66,8 +101,13 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public int getTableId(String name) throws NoSuchElementException {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; MAY DONE
+        try {
+            return tables.get(h.get(name2id.get(name))).file.getId();
+        }
+        catch (Exception e) {
+            throw new NoSuchElementException();
+        }
     }
 
     /**
@@ -78,8 +118,11 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        if (null == h.get(tableid)) {
+            throw new NoSuchElementException();
+        }
+        return tables.get(h.get(tableid)).file.getTupleDesc();
     }
 
     /**
@@ -90,30 +133,42 @@ public class Catalog {
      *                function passed to addTable
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        if (null == h.get(tableid)) {
+            throw new NoSuchElementException();
+        }
+        return tables.get(h.get(tableid)).file;
     }
 
     public String getPrimaryKey(int tableid) {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        if (null == h.get(tableid)) {
+            return null;
+        }
+        return tables.get(h.get(tableid)).pkeyField;
     }
 
     public Iterator<Integer> tableIdIterator() {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        return table_ids.iterator();
     }
 
     public String getTableName(int id) {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        if (null == h.get(id)) {
+            return null;
+        }
+        return tables.get(h.get(id)).name;
     }
 
     /**
      * Delete all tables from the catalog
      */
     public void clear() {
-        // TODO: some code goes here
+        // TODO: some code goes here; MAY DONE
+        this.h.clear();
+        this.tables.clear();
+        this.name2id.clear();
     }
 
     /**

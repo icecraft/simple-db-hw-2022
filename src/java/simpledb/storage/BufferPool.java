@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -31,6 +32,12 @@ public class BufferPool {
 
     private static int pageSize = DEFAULT_PAGE_SIZE;
 
+    private int maxPages;
+    private int pageUsed;
+    private ConcurrentHashMap<PageId, Page> hPage;
+    private ArrayList<PageId> seqs;
+    private final ReentrantLock lock;
+
     /**
      * Default number of pages passed to the constructor. This is used by
      * other classes. BufferPool should use the numPages argument to the
@@ -44,7 +51,12 @@ public class BufferPool {
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        // TODO: some code goes here
+        // TODO: some code goes here; MAY DONE;
+        maxPages = numPages;
+        pageUsed = 0;
+        hPage = new ConcurrentHashMap<PageId, Page>();
+        lock = new ReentrantLock();
+        seqs = new ArrayList<PageId>();
     }
 
     public static int getPageSize() {
@@ -78,8 +90,23 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        Page page;
+
+        lock.lock();
+        if hPage.contains(pid) {
+            page = hPage.get(pid);
+            return page;
+        } else {
+            page = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
+            if pageUsed == maxPages {
+                evictPage();
+            }
+            seqs.add(pid);
+            hPage.put(pid, page);
+        }
+        lock.unlock();
+        return page;
     }
 
     /**
@@ -217,6 +244,8 @@ public class BufferPool {
     private synchronized void evictPage() throws DbException {
         // TODO: some code goes here
         // not necessary for lab1
+        hPage.remove(seqs.remove(0));
+        pageUsed -= 1;
     }
 
 }

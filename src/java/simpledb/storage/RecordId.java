@@ -10,6 +10,8 @@ public class RecordId implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private PageId pid;
+    private int tupleno;
     /**
      * Creates a new RecordId referring to the specified PageId and tuple
      * number.
@@ -18,23 +20,25 @@ public class RecordId implements Serializable {
      * @param tupleno the tuple number within the page.
      */
     public RecordId(PageId pid, int tupleno) {
-        // TODO: some code goes here
+        // TODO: some code goes here; MAY DONE;
+        this.pid = pid;
+        this.tupleno = tupleno;
     }
 
     /**
      * @return the tuple number this RecordId references.
      */
     public int getTupleNumber() {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; MAY DONE;
+        return tupleno;
     }
 
     /**
      * @return the page id this RecordId references.
      */
     public PageId getPageId() {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        return pid;
     }
 
     /**
@@ -46,7 +50,23 @@ public class RecordId implements Serializable {
     @Override
     public boolean equals(Object o) {
         // TODO: some code goes here
-        throw new UnsupportedOperationException("implement this");
+        if (o == this)  {
+            return true;
+        }
+        if  (!(o instanceof RecordId)) {
+            return false;
+        }
+ 
+        RecordId oo = (RecordId) o;
+ 
+        if (oo.getPageId() == pid) {
+            return false;
+        }
+        if (oo.getTupleNumber() != tupleno) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -57,8 +77,8 @@ public class RecordId implements Serializable {
      */
     @Override
     public int hashCode() {
-        // TODO: some code goes here
-        throw new UnsupportedOperationException("implement this");
+        // TODO: some code goes here; MAY DONE
+        return pid.hashCode() + tupleno;
 
     }
 

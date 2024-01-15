@@ -3,7 +3,7 @@ package simpledb.storage;
 import simpledb.common.Type;
 
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -44,11 +44,14 @@ public class TupleDesc implements Serializable {
      *         that are included in this TupleDesc
      */
     public Iterator<TDItem> iterator() {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        return items.iterator();
     }
 
     private static final long serialVersionUID = 1L;
+
+    // private TDItem[] items;
+    private ArrayList<TDItem> items;
 
     /**
      * Create a new TupleDesc with typeAr.length fields with fields of the
@@ -60,7 +63,11 @@ public class TupleDesc implements Serializable {
      *                be null.
      */
     public TupleDesc(Type[] typeAr, String[] fieldAr) {
-        // TODO: some code goes here
+        // TODO: some code goes here; MAY DONE
+        items = new ArrayList<TDItem>();
+        for (int i = 0; i < typeAr.length; i++) {
+            items.add(new TDItem(typeAr[i], fieldAr[i]));
+        }
     }
 
     /**
@@ -71,15 +78,16 @@ public class TupleDesc implements Serializable {
      *               TupleDesc. It must contain at least one entry.
      */
     public TupleDesc(Type[] typeAr) {
-        // TODO: some code goes here
+        // TODO: some code goes here; MAY DONE
+        this(typeAr, new String[typeAr.length]);
     }
 
     /**
      * @return the number of fields in this TupleDesc
      */
     public int numFields() {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; MAY DONE
+        return items.size();
     }
 
     /**
@@ -90,8 +98,11 @@ public class TupleDesc implements Serializable {
      * @throws NoSuchElementException if i is not a valid field reference.
      */
     public String getFieldName(int i) throws NoSuchElementException {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        if (0 > i || i >= items.size()) {
+            throw new NoSuchElementException();
+        }
+        return items.get(i).fieldName;
     }
 
     /**
@@ -103,8 +114,11 @@ public class TupleDesc implements Serializable {
      * @throws NoSuchElementException if i is not a valid field reference.
      */
     public Type getFieldType(int i) throws NoSuchElementException {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        if (0 > i || i >= items.size()) {
+            throw new NoSuchElementException();
+        }
+        return items.get(i).fieldType;
     }
 
     /**
@@ -115,8 +129,14 @@ public class TupleDesc implements Serializable {
      * @throws NoSuchElementException if no field with a matching name is found.
      */
     public int indexForFieldName(String name) throws NoSuchElementException {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here;  MAY DONE
+        for (int i = 0; i < items.size(); i++) {
+            String fieldname = items.get(i).fieldName;
+            if (fieldname != null && fieldname.equals(name) ) {
+                return i;
+            }
+        }
+       throw new NoSuchElementException();
     }
 
     /**
@@ -124,11 +144,15 @@ public class TupleDesc implements Serializable {
      *         Note that tuples from a given TupleDesc are of a fixed size.
      */
     public int getSize() {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; MAY DONE
+        int sum = 0;
+        for (int i = 0; i < items.size(); i++) {
+            sum += items.get(i).fieldType.getLen();
+        }
+        return sum;
     }
 
-    /**
+    /*
      * Merge two TupleDescs into one, with td1.numFields + td2.numFields fields,
      * with the first td1.numFields coming from td1 and the remaining from td2.
      *
@@ -137,8 +161,17 @@ public class TupleDesc implements Serializable {
      * @return the new TupleDesc
      */
     public static TupleDesc merge(TupleDesc td1, TupleDesc td2) {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+    	int nums = td1.numFields() + td2.numFields();
+    	int n1 = td1.numFields();
+    	Type typeAr[] = new Type[nums];
+    	String fieldAr[] = new String[nums];
+    	for(int i = 0; i < nums; ++i) {
+    		typeAr[i] = (i < n1)? td1.getFieldType(i) : td2.getFieldType(i - n1);
+    		fieldAr[i] = (i < n1) ? td1.getFieldName(i) : td2.getFieldName(i - n1);
+    	}
+    	
+        return new TupleDesc(typeAr, fieldAr);
     }
 
     /**
@@ -150,10 +183,30 @@ public class TupleDesc implements Serializable {
      * @param o the Object to be compared for equality with this TupleDesc.
      * @return true if the object is equal to this TupleDesc.
      */
-
     public boolean equals(Object o) {
-        // TODO: some code goes here
-        return false;
+        // TODO: some code goes here; MAY DONE
+       if (o == this)  {
+           return true;
+       }
+       if  (!(o instanceof TupleDesc)) {
+           return false;
+       }
+
+       TupleDesc oo = (TupleDesc) o;
+
+       if (oo.numFields() != items.size()) {
+           return false; 
+       }
+       for (int i = 0; i < items.size(); i++) {
+           if (items.get(i).fieldName != oo.getFieldName(i) ) {
+               return false;
+           }
+
+           if (items.get(i).fieldType != oo.getFieldType(i)) {
+               return false;
+           }
+       }
+       return true;
     }
 
     public int hashCode() {
@@ -170,7 +223,11 @@ public class TupleDesc implements Serializable {
      * @return String describing this descriptor.
      */
     public String toString() {
-        // TODO: some code goes here
-        return "";
+        // TODO: some code goes here; MAY DONE
+        String[] arr = new String[items.size()];
+        for (int i = 0; i < items.size(); i++) {
+            arr[i] = items.get(i).toString();
+        }
+        return String.join(",", arr);
     }
 }
