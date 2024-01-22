@@ -14,16 +14,22 @@ public class HeapPageId implements PageId {
      * @param tableId The table that is being referenced
      * @param pgNo    The page number in that table.
      */
+
+    private int _tableId;
+    private int _pgNo;
+
     public HeapPageId(int tableId, int pgNo) {
-        // TODO: some code goes here
+        // TODO: some code goes here; MAY DONE!
+        _tableId = tableId;
+        _pgNo = pgNo;
     }
 
     /**
      * @return the table associated with this PageId
      */
     public int getTableId() {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; MAY DONE!
+        return _tableId;
     }
 
     /**
@@ -31,8 +37,8 @@ public class HeapPageId implements PageId {
      *         this PageId
      */
     public int getPageNumber() {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; MAY DONE
+        return _pgNo;
     }
 
     /**
@@ -42,8 +48,10 @@ public class HeapPageId implements PageId {
      * @see BufferPool
      */
     public int hashCode() {
-        // TODO: some code goes here
-        throw new UnsupportedOperationException("implement this");
+        // TODO: some code goes here; MAY DONE
+
+        // throw new UnsupportedOperationException("implement this");
+        return getTableId() * 10000 + getPageNumber();  // no reason !!
     }
 
     /**
@@ -54,8 +62,20 @@ public class HeapPageId implements PageId {
      *         ids are the same)
      */
     public boolean equals(Object o) {
-        // TODO: some code goes here
-        return false;
+        // TODO: some code goes here; MAY DONE
+        if (o == this)  {
+            return true;
+        }
+        if  (!(o instanceof HeapPageId)) {
+            return false;
+        }
+ 
+        HeapPageId oo = (HeapPageId) o;
+ 
+        if ((oo.getTableId() != getTableId()) || (oo.getPageNumber() != getPageNumber())) {
+            return false; 
+        }
+        return true;
     }
 
     /**

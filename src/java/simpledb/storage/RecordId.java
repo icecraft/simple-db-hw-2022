@@ -59,7 +59,7 @@ public class RecordId implements Serializable {
  
         RecordId oo = (RecordId) o;
  
-        if (oo.getPageId() == pid) {
+        if (!(oo.getPageId().equals(getPageId()))) {
             return false;
         }
         if (oo.getTupleNumber() != tupleno) {

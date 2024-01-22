@@ -56,6 +56,8 @@ public class HeapPage implements Page {
         for (int i = 0; i < header.length; i++)
             header[i] = dis.readByte();
 
+        System.out.printf("# %d ==> %d#\n", numSlots, header.length);
+
         tuples = new Tuple[numSlots];
         try {
             // allocate and read the actual records of this page
@@ -75,20 +77,19 @@ public class HeapPage implements Page {
      * @return the number of tuples on this page
      */
     private int getNumTuples() {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; 
+        return  (int)Math.floor((BufferPool.getPageSize() * 8 * 1.0) / ( td.getSize() + 1));
 
     }
 
     /**
-     * Computes the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
+     * Computes the number of bytes in the header onumSlotsf a page in a HeapFile with each tuple occupying tupleSize bytes
      *
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
     private int getHeaderSize() {
-
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; MAY DONE
+        return  (int)Math.ceil(getNumTuples() * 1.0 / 8);
 
     }
 
@@ -121,8 +122,9 @@ public class HeapPage implements Page {
      * @return the PageId associated with this page.
      */
     public HeapPageId getId() {
-        // TODO: some code goes here
-        throw new UnsupportedOperationException("implement this");
+        // TODO: some code goes here; MAY DONE
+        // throw new UnsupportedOperationException("implement this");
+        return pid;
     }
 
     /**
@@ -294,15 +296,18 @@ public class HeapPage implements Page {
      */
     public int getNumUnusedSlots() {
         // TODO: some code goes here
-        return 0;
+        return numSlots;
     }
 
     /**
      * Returns true if associated slot on this page is filled.
      */
     public boolean isSlotUsed(int i) {
-        // TODO: some code goes here
-        return false;
+        // TODO: some code goes here; MAY DONE
+        int idx = i / 8;
+        int bit = i % 8;
+        // System.out.printf("%d %d\n", i, header[idx]);
+        return ((header[idx] >> bit) & 1) == 1;
     }
 
     /**
@@ -318,9 +323,24 @@ public class HeapPage implements Page {
      *         (note that this iterator shouldn't return tuples in empty slots!)
      */
     public Iterator<Tuple> iterator() {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        int maxIdx = tuples.length - 1;
+    
+        Iterator<Tuple> it = new Iterator<Tuple>() {
+            private int currentIndex = 0;
+ 
+            public boolean hasNext() {
+                return currentIndex < maxIdx;
+            }
+        
+            public Tuple next() {
+                return tuples[currentIndex++];
+            }
+
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+        };
+        return it;
     }
-
 }
-

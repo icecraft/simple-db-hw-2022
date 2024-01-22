@@ -94,12 +94,12 @@ public class BufferPool {
         Page page;
 
         lock.lock();
-        if hPage.contains(pid) {
+        if (hPage.contains(pid)) {
             page = hPage.get(pid);
             return page;
         } else {
             page = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
-            if pageUsed == maxPages {
+            if (pageUsed == maxPages) {
                 evictPage();
             }
             seqs.add(pid);
