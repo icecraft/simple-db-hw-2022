@@ -11,6 +11,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * HeapFile is an implementation of a DbFile that stores a collection of tuples
@@ -30,8 +31,12 @@ public class HeapFile implements DbFile {
      * @param f the file that stores the on-disk backing store for this heap
      *          file.
      */
+    private File f;
+    private TupleDesc td;
+
     public HeapFile(File f, TupleDesc td) {
-        // TODO: some code goes here
+        this.f = f;
+        this.td = td;
     }
 
     /**
@@ -40,8 +45,8 @@ public class HeapFile implements DbFile {
      * @return the File backing this HeapFile on disk.
      */
     public File getFile() {
-        // TODO: some code goes here
-        return null;
+        // TODO: some code goes here; MAY DONE
+        return f;
     }
 
     /**
@@ -54,8 +59,8 @@ public class HeapFile implements DbFile {
      * @return an ID uniquely identifying this HeapFile.
      */
     public int getId() {
-        // TODO: some code goes here
-        throw new UnsupportedOperationException("implement this");
+        // TODO: some code goes here; MAY DONE
+        return f.getAbsolutePath().hashCode();
     }
 
     /**
@@ -64,13 +69,28 @@ public class HeapFile implements DbFile {
      * @return TupleDesc of this DbFile.
      */
     public TupleDesc getTupleDesc() {
-        // TODO: some code goes here
-        throw new UnsupportedOperationException("implement this");
+        // TODO: some code goes here; MAY DONE
+        return td;
     }
 
     // see DbFile.java for javadocs
     public Page readPage(PageId pid) {
-        // TODO: some code goes here
+        // TODO: some code goes here; MAY DONE
+        int pageSize = BufferPool.getPageSize();
+        int pageOffset = pid.getPageNumber() * pageSize;
+
+        try {
+            FileInputStream fis = new FileInputStream(f);
+            byte[] bytes = new byte[pageSize];
+            fis.read(bytes, pageOffset, pageSize);
+
+            HeapPageId hPid = new HeapPageId(pid.getTableId(), pid.getPageNumber());
+            return new HeapPage(hPid, bytes);
+        } catch (IOException e) {
+            // this really shouldn't happen
+            e.printStackTrace();
+        }
+
         return null;
     }
 
@@ -84,8 +104,8 @@ public class HeapFile implements DbFile {
      * Returns the number of pages in this HeapFile.
      */
     public int numPages() {
-        // TODO: some code goes here
-        return 0;
+        // TODO: some code goes here; MAY DONE
+        return (int) f.length() / BufferPool.getPageSize();
     }
 
     // see DbFile.java for javadocs
@@ -107,7 +127,69 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public DbFileIterator iterator(TransactionId tid) {
         // TODO: some code goes here
-        return null;
+        return new HeapFileIterator(this, tid);
+    }
+
+    private static final class HeapFileIterator implements DbFileIterator {
+        private HeapFile heapF;
+        private TupleDesc td;
+        private FileInputStream fis;
+        private int page_no = 0;
+        private Iterator<Tuple> it;
+        private TransactionId tid;
+        private boolean opened;
+
+        public HeapFileIterator(HeapFile heapF, TransactionId tid) {
+            this.heapF = heapF;
+            this.tid = tid;
+
+        }
+
+        private void readPage() {
+            HeapPageId pid = new HeapPageId(heapF.getId(), page_no++); 
+            HeapPage f = (HeapPage) heapF.readPage(pid);
+            it = f.iterator();
+        }
+
+        public void open() {
+            opened = true;
+            page_no = 0;
+            readPage();
+        }
+
+        public boolean hasNext() {
+            if (! opened) {
+                return false;
+            }
+            if (heapF.numPages() > page_no + 1) {
+                return true;
+            }
+            return it.hasNext();
+        }
+
+        public Tuple next() {
+            if (! opened) {
+                throw new NoSuchElementException();
+            }
+
+            if (it.hasNext()) {
+                return it.next();
+            }
+            readPage();
+
+            return it.next();
+
+        }
+
+        public void rewind() {
+            page_no = 0;
+            readPage();
+        }
+        
+        public void close() {
+            page_no = 0;
+            opened = false;
+        }
     }
 
 }
