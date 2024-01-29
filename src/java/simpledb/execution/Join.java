@@ -26,6 +26,7 @@ public class Join extends Operator {
     private JoinPredicate p;
     private OpIterator child1;
     private OpIterator child2;
+    private Tuple t1;
 
     public Join(JoinPredicate p, OpIterator child1, OpIterator child2) {
         // TODO: some code goes here
@@ -72,11 +73,13 @@ public class Join extends Operator {
         super.open();
         child1.open();
         child2.open();
+        t1 = null;
 
     }
 
     public void close() {
         // TODO: some code goes here
+        t1 = null;
         child2.close();
         child1.close();
         super.close();
@@ -86,6 +89,7 @@ public class Join extends Operator {
         // TODO: some code goes here
         child1.rewind();
         child2.rewind();
+        t1 = null;
     }
 
     /**
@@ -107,7 +111,29 @@ public class Join extends Operator {
      * @see JoinPredicate#filter
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-        // TODO: some code goes here
+        while (child1.hasNext() || t1  != null) {
+            if (t1 == null && child1.hasNext()) {
+                t1 = child1.next();
+            }
+            while (child2.hasNext()) {
+                Tuple t2 = child2.next();
+                if (p.filter(t1, t2)) {
+                    Tuple res = new Tuple(getTupleDesc());
+                    for (int i=0; i < t1.getTupleDesc().numFields(); i++) {
+                        res.setField(i, t1.getField(i));
+                    }
+                    for (int i=0; i < t2.getTupleDesc().numFields(); i++) {
+                        res.setField(i + t1.getTupleDesc().numFields(), t2.getField(i));
+                    }
+                    res.setRecordId(t1.getRecordId());
+                    return res;
+                }
+            }
+
+            t1 = null;
+            child2.rewind();
+        }
+
         return null;
     }
 
