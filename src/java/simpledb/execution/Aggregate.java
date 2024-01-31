@@ -110,7 +110,7 @@ public class Aggregate extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // TODO: some code goes here
-        return null;
+        return child.next();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {

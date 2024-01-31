@@ -3,7 +3,6 @@ package simpledb.execution;
 import java.util.concurrent.*;
 import java.util.*;
 import java.lang.Math;
-import java.lang.reflect.Field;
 
 import simpledb.common.DbException;
 import simpledb.common.Type;
