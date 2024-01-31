@@ -3,6 +3,7 @@ package simpledb.execution;
 import java.util.concurrent.*;
 import java.util.*;
 import java.lang.Math;
+import java.lang.reflect.Field;
 
 import simpledb.common.DbException;
 import simpledb.common.Type;
@@ -35,48 +36,49 @@ public class IntegerAggregator implements Aggregator {
     private Type gbfieldtype;
     private int afield;
     private Op what;
-    private ConcurrentHashMap<Integer, Integer> value_h;
-    private ConcurrentHashMap<Integer, Integer> count_h;
+    private ConcurrentHashMap<IntField, Integer> value_h;
+    private ConcurrentHashMap<IntField, Integer> count_h;
+    private int sum_val;
+    private int count_val;
+    private TupleDesc tupleDesc;
 
     public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        // TODO: some code goes here; MAY DONE
         this.gbfield = gbfield;
         this.gbfieldtype = gbfieldtype;
         this.afield = afield;
         this.what = what;
 
-        this.value_h = new ConcurrentHashMap<Integer,  Integer>();   
-        this.count_h = new ConcurrentHashMap<Integer,  Integer>();   
+        this.value_h = new ConcurrentHashMap<IntField, Integer>();
+        this.count_h = new ConcurrentHashMap<IntField, Integer>();
+        this.sum_val = 0;
+        this.count_val = 0;
+
+        if (gbfield == NO_GROUPING) {
+            tupleDesc = new TupleDesc(new Type[]{Type.INT_TYPE}, new String[]{"aggerateValue"});
+
+        } else {
+            tupleDesc = new TupleDesc(new Type[]{gbfieldtype, Type.INT_TYPE}, new String[]{"groupValue","aggerateValue"});
+        }
+
     }
 
-    /**
-     * Merge a new tuple into the aggregate, grouping as indicated in the
-     * constructor
-     *
-     * @param tup the Tuple containing an aggregate field and a group-by field
-     */
-    public void mergeTupleIntoGroup(Tuple tup) {
-        if (gbfieldtype == null) {
-            return;
-        } 
-
+    private void mergeTupleByGroup(Tuple tup) {
         IntField g_field = (IntField) tup.getField(gbfield);
         IntField a_field = (IntField) tup.getField(afield);
-        int g_val = g_field.getValue();
         int a_val = a_field.getValue();
 
-        if (! value_h.containsKey(g_val)) {
+        if (! value_h.containsKey(g_field)) {
             if (what == Op.COUNT) {
-                value_h.put(g_val, 0);
+                value_h.put(g_field, 0);
             } else {
-                value_h.put(g_val, a_val);
+                value_h.put(g_field, a_val);
             }
-            count_h.put(g_val, 1);
+            count_h.put(g_field, 1);
 
         } else {
 
-            int old_val = value_h.get(g_val);
-            int old_count = count_h.get(g_val);
+            int old_val = value_h.get(g_field);
+            int old_count = count_h.get(g_field);
             int n_val = 0;
 
             switch (what) {
@@ -95,8 +97,48 @@ public class IntegerAggregator implements Aggregator {
                 default:
                     break;
             }
-            value_h.put(g_val, n_val);
-            count_h.put(g_val, old_count+1);
+            value_h.put(g_field, n_val);
+            count_h.put(g_field, old_count+1);
+        }
+    }
+
+    private void mergeTupleNoGroup(Tuple tup) {
+        IntField a_field = (IntField) tup.getField(afield);
+        int a_val = a_field.getValue();
+
+        if (count_val == 0) {
+            count_val += 1;
+            sum_val += a_val;
+        } else {
+            switch (what) {
+                case MIN:
+                    sum_val = Math.min(sum_val, a_val);
+                    break;
+                case MAX:
+                    sum_val = Math.max(sum_val, a_val);
+                    break;
+                case SUM:
+                case AVG:
+                case SUM_COUNT:
+                case SC_AVG:
+                    sum_val = sum_val + a_val;
+                    break;
+            }
+            count_val += 1;
+        }
+    }
+
+    /**
+     * Merge a new tuple into the aggregate, grouping as indicated in the
+     * constructor
+     *
+     * @param tup the Tuple containing an aggregate field and a group-by field
+     */
+    public void mergeTupleIntoGroup(Tuple tup) {
+        if (gbfield == NO_GROUPING) {
+            mergeTupleNoGroup(tup);
+        } else {
+            mergeTupleByGroup(tup);
         }
     }
 
@@ -108,52 +150,117 @@ public class IntegerAggregator implements Aggregator {
      *         aggregateVal is determined by the type of aggregate specified in
      *         the constructor.
      */
+
     public OpIterator iterator() {
-        // TODO: some code goes here
-        throw new
-        UnsupportedOperationException("please implement me for lab2");
+        OpIterator it = null;
+
+        if (gbfield == NO_GROUPING) {
+            it = new OpIterator() {
+                private boolean used = false;
+                public void open() throws DbException, TransactionAbortedException {
+                   return;
+                }
+                public boolean hasNext() throws DbException, TransactionAbortedException {
+                    return used == false;
+                }
+
+                public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
+                    used = true;
+
+                    Tuple tp = new Tuple(tupleDesc);
+
+                    int agg_val = 0;
+                    switch (what) {
+                        case MIN:
+                        case MAX:
+                        case SUM:
+                            agg_val = sum_val;
+                            break;
+                        case AVG:
+                        case SC_AVG:
+                            agg_val = sum_val / count_val;
+                            break;
+                        case SUM_COUNT:
+                            agg_val = count_val;
+                            break;
+                    }
+
+                    IntField f = new IntField(agg_val);
+                    tp.setField(0, f);
+                   return tp;
+                }
+
+                public void rewind() throws DbException, TransactionAbortedException {
+                    used = false;
+                }
+
+                public TupleDesc getTupleDesc() {
+                    return tupleDesc;
+                }
+
+                public void close() {
+                    used = false;
+                    return;
+                }
+            };
+
+        } else {
+            it = new OpIterator() {
+                Enumeration enu;
+
+                public void open() throws DbException, TransactionAbortedException {
+                    enu = value_h.keys();
+                }
+
+                public boolean hasNext() throws DbException, TransactionAbortedException {
+                    return enu.hasMoreElements();
+                }
+
+                public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
+                    IntField c_key = (IntField) enu.nextElement();
+                    
+                    int sum_val = value_h.get(c_key);
+                    int count_val = count_h.get(c_key);
+                    Tuple tp = new Tuple(tupleDesc);
+
+                    int agg_val = 0;
+                    switch (what) {
+                        case MIN:
+                        case MAX:
+                        case SUM:
+                            agg_val = sum_val;
+                            break;
+                        case AVG:
+                        case SC_AVG:
+                            agg_val = sum_val / count_val;
+                            break;
+                        case SUM_COUNT:
+                            agg_val = count_val;
+                            break;
+                    }
+
+                    IntField f = new IntField(agg_val);
+                    tp.setField(0, c_key);
+                    tp.setField(1, f);
+                   return tp;
+
+
+                }
+
+                public void rewind() throws DbException, TransactionAbortedException {
+                    enu = value_h.keys();
+                }
+
+                public TupleDesc getTupleDesc() {
+                    return tupleDesc;
+                }
+
+                public void close() {
+                    return;
+                }
+            };
+        }
+
+        return it;
     }
-
-    private static final class IntegerAggregatorIterator implements OpIterator {
-        private ConcurrentHashMap<Integer, Integer> value_h;
-        private ConcurrentHashMap<Integer, Integer> count_h;
-        private Op what;
-        private Enumeration enu;
-
-        public IntegerAggregatorIterator( ConcurrentHashMap<Integer, Integer>value_h,  ConcurrentHashMap<Integer, Integer> count_h, Op what ) {
-            this.value_h = value_h;
-            this.count_h = count_h;
-            this.what = what;
-        }
-    
-        public void open() {
-            enu = value_h.keys();
-        }
-
-
-        public boolean hasNext() throws DbException, TransactionAbortedException {
-            return enu.hasMoreElements();
-        }
-
-
-        public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-            return null;
-        }
-
-        public void rewind() throws DbException, TransactionAbortedException {
-            enu = value_h.keys();
-        }
-
-
-        public TupleDesc getTupleDesc() {
-            // TODO:
-            return null;
-        }
-
-
-        public void close() {
-            return;
-        }
-    }
-
 }

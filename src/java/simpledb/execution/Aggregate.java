@@ -143,7 +143,7 @@ public class Aggregate extends Operator {
     @Override
     public OpIterator[] getChildren() {
         // TODO: some code goes here
-        return OpIterator[]{child};
+        return new OpIterator[]{child};
     }
 
     @Override
