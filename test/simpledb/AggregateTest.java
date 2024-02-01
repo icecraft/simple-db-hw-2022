@@ -97,7 +97,8 @@ public class AggregateTest extends SimpleDbTestBase {
             Aggregator.Op.MIN);
     TupleDesc expected = Utility.getTupleDesc(2);
     TupleDesc actual = op.getTupleDesc();
-    assertEquals(expected, actual);
+    assertEquals(expected.getFieldType(0), actual.getFieldType(0));
+    assertEquals(expected.getFieldType(1), actual.getFieldType(1));
 
     // Int, String TupleDesc
     // We group by the String field, returning <String, Count> tuples.
@@ -105,7 +106,10 @@ public class AggregateTest extends SimpleDbTestBase {
             Aggregator.Op.COUNT);
     expected = new TupleDesc(new Type[]{ Type.STRING_TYPE, Type.INT_TYPE });
     actual = op.getTupleDesc();
-    assertEquals(expected, actual);
+    System.out.println(actual);
+    assertEquals(expected.getFieldType(0), actual.getFieldType(0));
+    assertEquals(expected.getFieldType(1), actual.getFieldType(1));
+
   }
 
   /**

@@ -3,6 +3,8 @@ package simpledb.execution;
 import simpledb.common.DbException;
 import simpledb.common.Type;
 import simpledb.execution.Aggregator.Op;
+import simpledb.execution.IntegerAggregator;
+import simpledb.execution.StringAggregator;
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 import simpledb.transaction.TransactionAbortedException;
@@ -36,6 +38,8 @@ public class Aggregate extends Operator {
     private int afield;
     private int gfield;
     private Aggregator.Op aop;
+    private Aggregator agg;
+    private OpIterator it;
 
     public Aggregate(OpIterator child, int afield, int gfield, Aggregator.Op aop) {
         // TODO: some code goes here; MAY DONE
@@ -43,6 +47,14 @@ public class Aggregate extends Operator {
         this.afield = afield;
         this.gfield = gfield;
         this.aop = aop;
+
+        Type gbfieldType = this.gfield == -1? null: child.getTupleDesc().getFieldType(this.gfield);
+        if (this.child.getTupleDesc().getFieldType(this.afield) == Type.STRING_TYPE) {
+            this.agg = new StringAggregator(gfield, gbfieldType, afield, aop);
+        } else {
+            this.agg = new IntegerAggregator(gfield, gbfieldType, afield, aop);
+        }
+        it = this.agg.iterator();
     }
 
     /**
@@ -52,7 +64,7 @@ public class Aggregate extends Operator {
      */
     public int groupField() {
         // TODO: some code goes here; MAY DONE
-        return gfield;
+        return 0;
     }
 
     /**
@@ -62,7 +74,7 @@ public class Aggregate extends Operator {
      */
     public String groupFieldName() {
         // TODO: some code goes here; MAY DONE
-        return child.getTupleDesc().getFieldName(gfield);
+        return it.getTupleDesc().getFieldName(0);
     }
 
     /**
@@ -70,7 +82,10 @@ public class Aggregate extends Operator {
      */
     public int aggregateField() {
         // TODO: some code goes here; MAY DONE
-        return afield;
+        if (gfield == -1) {
+            return 0;
+        }
+        return 1;
     }
 
     /**
@@ -79,7 +94,10 @@ public class Aggregate extends Operator {
      */
     public String aggregateFieldName() {
         // TODO: some code goes here; MAY DONE
-        return child.getTupleDesc().getFieldName(afield);
+        if (gfield == -1) {
+            return it.getTupleDesc().getFieldName(0);
+        }
+        return it.getTupleDesc().getFieldName(1);
     }
 
     /**
@@ -99,6 +117,11 @@ public class Aggregate extends Operator {
         // TODO: some code goes here
         super.open();
         child.open();
+        while (child.hasNext()) {
+            this.agg.mergeTupleIntoGroup(child.next());
+        }
+        it.open();
+       
     }
 
     /**
@@ -110,12 +133,16 @@ public class Aggregate extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // TODO: some code goes here
-        return child.next();
+        if (it.hasNext()) {
+            return it.next();
+        }
+        return null;
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // TODO: some code goes here
         child.rewind();
+        it.rewind();
     }
 
     /**
@@ -131,12 +158,13 @@ public class Aggregate extends Operator {
      */
     public TupleDesc getTupleDesc() {
         // TODO: some code goes here
-        return child.getTupleDesc();
+        return it.getTupleDesc();
     }
 
     public void close() {
         // TODO: some code goes here
         child.close();
+        it.close();
         super.close();
     }
 

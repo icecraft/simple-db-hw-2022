@@ -7,6 +7,7 @@ import simpledb.common.Type;
 import simpledb.storage.DbFileIterator;
 import simpledb.storage.StringField;
 import simpledb.storage.IntField;
+import simpledb.storage.Field;
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 import simpledb.transaction.TransactionAbortedException;
@@ -33,7 +34,7 @@ public class StringAggregator implements Aggregator {
     private int gbfield;
     private Type gbfieldType;
     private int afield;
-    private ConcurrentHashMap<IntField, Integer> count_h;
+    private ConcurrentHashMap<Field, Integer> count_h;
     private int count_val;
     private TupleDesc tupleDesc;
 
@@ -46,7 +47,7 @@ public class StringAggregator implements Aggregator {
         this.gbfieldType = gbfieldtype;
         this.afield = afield;
 
-        this.count_h = new ConcurrentHashMap<IntField, Integer>();
+        this.count_h = new ConcurrentHashMap<Field, Integer>();
         count_val = 0;
 
         if (gbfield == NO_GROUPING) {
@@ -58,7 +59,7 @@ public class StringAggregator implements Aggregator {
     }
 
     private void mergeTupleByGroup(Tuple tup) {
-        IntField g_field = (IntField) tup.getField(gbfield);
+        Field g_field = (Field) tup.getField(gbfield);
 
         if (! count_h.containsKey(g_field)) {
             count_h.put(g_field, 1);
@@ -143,7 +144,7 @@ public class StringAggregator implements Aggregator {
                 }
 
                 public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-                    IntField c_key = (IntField) enu.nextElement();
+                    Field c_key = (Field) enu.nextElement();
                     
                     int count_val = count_h.get(c_key);
                     Tuple tp = new Tuple(tupleDesc);

@@ -8,6 +8,7 @@ import simpledb.common.DbException;
 import simpledb.common.Type;
 import simpledb.storage.DbFileIterator;
 import simpledb.storage.IntField;
+import simpledb.storage.Field;
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 import simpledb.transaction.TransactionAbortedException;
@@ -35,8 +36,8 @@ public class IntegerAggregator implements Aggregator {
     private Type gbfieldtype;
     private int afield;
     private Op what;
-    private ConcurrentHashMap<IntField, Integer> value_h;
-    private ConcurrentHashMap<IntField, Integer> count_h;
+    private ConcurrentHashMap<Field, Integer> value_h;
+    private ConcurrentHashMap<Field, Integer> count_h;
     private int sum_val;
     private int count_val;
     private TupleDesc tupleDesc;
@@ -47,8 +48,8 @@ public class IntegerAggregator implements Aggregator {
         this.afield = afield;
         this.what = what;
 
-        this.value_h = new ConcurrentHashMap<IntField, Integer>();
-        this.count_h = new ConcurrentHashMap<IntField, Integer>();
+        this.value_h = new ConcurrentHashMap<Field, Integer>();
+        this.count_h = new ConcurrentHashMap<Field, Integer>();
         this.sum_val = 0;
         this.count_val = 0;
 
@@ -62,7 +63,7 @@ public class IntegerAggregator implements Aggregator {
     }
 
     private void mergeTupleByGroup(Tuple tup) {
-        IntField g_field = (IntField) tup.getField(gbfield);
+        Field g_field = (Field) tup.getField(gbfield);
         IntField a_field = (IntField) tup.getField(afield);
         int a_val = a_field.getValue();
 
@@ -216,7 +217,7 @@ public class IntegerAggregator implements Aggregator {
                 }
 
                 public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-                    IntField c_key = (IntField) enu.nextElement();
+                    Field c_key = (Field) enu.nextElement();
                     
                     int sum_val = value_h.get(c_key);
                     int count_val = count_h.get(c_key);
